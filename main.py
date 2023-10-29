@@ -14,7 +14,7 @@ def main():
     Returns:
         None.
     """
-    for id in range(17, 187): # Modify the range to scrape different documents
+    for id in range(1, 187): # Modify the range to scrape different documents
         soup = get_html(id)
         createandsave_csv(soup, id)
         print("CSV file created for session {}".format(id))
@@ -40,36 +40,35 @@ def createandsave_csv(soup, id):
     # create the list of interventions
     intervention_list = get_interventionlist(soup)
 
-    # create the CSV file
-    with open("19 Legislature sessions/session_{}.csv".format(id), "w") as csv_file:
-        csv_file.write("id_seduta, session_date, deputy, governative_role, party, text, argument\n")
-
     for intervention in intervention_list:
 
+        intervention_description = intervention[0]
+
         try:
-            governative_role = intervention.em
+            governative_role = intervention_description.em
         except:
             governative_role = ""
         
         try:
-            party = intervention.span.text
+            party = intervention_description.span.text
         except:
             party = ""
 
-        argument = get_argument(intervention["id"], argsdict)
+        argument = get_argument(intervention_description["id"], argsdict)
         
         # Create a row of CSV file for each intervention
         row = ''
         row = row + str(id) + ', '
         row = row + str(session_date) + ', '
-        row = row + utils.format_text(str(intervention.a)) + ', '
+        row = row + 'XIX' + ',' # 19 legislaure, change for different legislatures
+        row = row + utils.format_text(str(intervention_description.a)) + ', '
         row = row + utils.format_text(str(governative_role)) + ', '
         row = row + utils.format_text(str(party)) + ', '
         row = row + utils.format_text(str(intervention)) + ', '
         row = row + utils.format_text(str(argument))
 
         # Open a CSV file for writing
-        with open("19 Legislature sessions/session_{}.csv".format(id), "a") as csv_file:
+        with open("data/sessions.csv".format(id), "a") as csv_file:
                 
                 # Write the row to the CSV file
                 csv_file.write(row + "\n")
@@ -87,16 +86,13 @@ def get_argument(id, argsdict):
     Returns:
     """
 
-    splitted_args = id.split(".")
-    # Find the arg that contains 'tit'
-    for arg in splitted_args:
-        if 'tit' in arg:
-            break
-    
     try:
-        argument = argsdict[arg]
+        if 'sub' in id.split(".")[-2]:
+            argument = argsdict[".".join(id.split(".")[-3:-1])]
+        else:
+            argument = argsdict[id.split(".")[-2]]
     except:
-        print("Argument ID {} not found in dictionary".format(arg))
+        print("Error: argument not found for id {}".format(id.split(".")[-2]))
         argument = ""
 
     return argument
@@ -105,6 +101,7 @@ def get_argument(id, argsdict):
 def get_interventionlist(soup):
     """
     Gets the list of interventions.
+    TODO: Finora prendi solo la prima frase di ogni intervento!
 
     Args:
         soup: BeautifulSoup object.
@@ -112,8 +109,24 @@ def get_interventionlist(soup):
     Returns:
         intervention_list: list of interventions.
     """
+    paragraphs = soup.find_all("p")
+    # find all the p of class interventoVirtuale after each p class intervento
 
-    return soup.find_all("p", {"class": "intervento"})
+    intervention_list = []
+    intervention = []
+
+    # This is necessary because there are a 'interventoVirtuale' for each sentences in the same intervento
+    for paragraph in paragraphs:
+        if paragraph.get('class') == ['intervento']:
+            intervention_list.append(intervention)
+            intervention = []
+            intervention.append(paragraph)
+        elif paragraph.get('class') == ['interventoVirtuale']:
+            intervention.append(paragraph.text)
+        else:
+            pass
+        
+    return intervention_list[1:]
 
 
 
@@ -130,10 +143,23 @@ def create_argsdict(soup):
 
     argsdict = {}
     titoli = soup.find_all("p", {"class": "titolo"})
+    titoli_allegati = soup.find_all("p", {"class": "titolo_allegato"})
+    sottotitoli = soup.find_all("p", {"class": "sottotitolo"})
 
     for titolo in titoli:
         argid = titolo["id"].split(".")[-1]
         argsdict[argid] = titolo.strong
+
+    for sottotitolo in sottotitoli:
+        argid = ".".join(sottotitolo["id"].split(".")[-2:])
+        argsdict[argid] = sottotitolo.strong
+
+    for titolo_allegato in titoli_allegati:
+        argid = titolo_allegato["id"].split(".")[-1]
+        argsdict[argid] = titolo_allegato.strong
+
+    # Add tit00000 for "interventi iniziali"
+    argsdict['tit00000'] = 'Interventi iniziali'
 
     return argsdict
 
