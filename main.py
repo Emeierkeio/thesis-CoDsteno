@@ -60,7 +60,7 @@ def createandsave_csv(soup, id):
         row = ''
         row = row + str(id) + ', '
         row = row + str(session_date) + ', '
-        row = row + 'XIX' + ',' # 19 legislaure, change for different legislatures
+        row = row + '19' + ',' # 19 legislaure, change for different legislatures
         row = row + utils.format_text(str(intervention_description.a)) + ', '
         row = row + utils.format_text(str(governative_role)) + ', '
         row = row + utils.format_text(str(party)) + ', '
