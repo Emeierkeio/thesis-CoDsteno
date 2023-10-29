@@ -65,7 +65,7 @@ def createandsave_csv(soup, id):
         row = row + utils.format_text(str(governative_role)) + ', '
         row = row + utils.format_text(str(party)) + ', '
         row = row + utils.format_text(str(intervention)) + ', '
-        row = row + utils.format_text(str(argument))
+        row = row + utils.format_text(str(argument).replace("(", "").replace(")", ""))
 
         # Open a CSV file for writing
         with open("data/sessions.csv".format(id), "a") as csv_file:
