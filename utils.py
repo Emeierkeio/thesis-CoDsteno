@@ -28,7 +28,7 @@ def months_itatoeng(month):
 
 
 
-def format_text(text):
+def format_text(text, choose=0):
     """
     Formats the text of the intervention.
     
@@ -39,6 +39,9 @@ def format_text(text):
         text: formatted text of the intervention (without newlines and commas).
     """
 
-    text = text.replace("\n", " ").replace(",", " ")
+    text = text.replace("\n", " ").replace(",", " ").replace("<em>", "").replace("</em>", "").replace("<strong>", "").replace("</strong>", "")
+    
+    if choose == 1:
+        text = text.replace("(", "").replace(")", "")
     
     return text

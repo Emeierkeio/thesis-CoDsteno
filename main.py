@@ -1,7 +1,8 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, element
 from datetime import datetime
 import utils
+from bs4.element import Tag
 
 
 def main():
@@ -38,11 +39,11 @@ def createandsave_csv(soup, id):
     argsdict = create_argsdict(soup)
 
     # create the list of interventions
-    intervention_list = get_interventionlist(soup)
+    set_ofinterventions = get_setofinterventions(soup)
 
-    for intervention in intervention_list:
+    for intervention_list in set_ofinterventions:
 
-        intervention_description = intervention[0]
+        intervention_description = intervention_list[0]
 
         try:
             governative_role = intervention_description.em
@@ -55,17 +56,32 @@ def createandsave_csv(soup, id):
             party = ""
 
         argument = get_argument(intervention_description["id"], argsdict)
-        
+
+        intervention = ''
+        for x in intervention_list:
+            if type(x) == str:
+                intervention = intervention + x + ' '
+            
+            if type(x) == Tag:
+                intervention = intervention + x.text + ' '
+
+        # Remove deputy name and party from intervention text
+        deputy_name = intervention_description.a.text + '. '
+        party_remove = ' (' + party + ')' + '. '
+        intervention = intervention.replace(deputy_name, "").replace(party_remove, "")
+
         # Create a row of CSV file for each intervention
         row = ''
-        row = row + str(id) + ', '
-        row = row + str(session_date) + ', '
+        row = row + str(id) + ','
+        row = row + str(session_date) + ','
         row = row + '19' + ',' # 19 legislaure, change for different legislatures
-        row = row + utils.format_text(str(intervention_description.a)) + ', '
-        row = row + utils.format_text(str(governative_role)) + ', '
-        row = row + utils.format_text(str(party)) + ', '
-        row = row + utils.format_text(str(intervention)) + ', '
-        row = row + utils.format_text(str(argument).replace("(", "").replace(")", ""))
+        row = row + utils.format_text(str(str(intervention_description.a.text)).title()) + ','
+        row = row + utils.format_text(str(get_deputy_id(intervention_description.a["href"]))) + ','
+        row = row + utils.format_text(str(governative_role)) + ','
+        row = row + utils.format_text(str(party)) + ','
+        row = row + utils.format_text(intervention) + ','
+        row = row + utils.format_text(str(argument), 1)
+
 
         # Open a CSV file for writing
         with open("data/sessions.csv".format(id), "a") as csv_file:
@@ -73,6 +89,14 @@ def createandsave_csv(soup, id):
                 # Write the row to the CSV file
                 csv_file.write(row + "\n")
 
+
+
+def get_deputy_id(text):
+    splitted_text = text.split(";")
+    for chunk in splitted_text:
+        for x in chunk.split("&"):
+            if 'idPersona' in x:
+                return x.split("=")[-1]
 
 
 def get_argument(id, argsdict):
@@ -98,7 +122,7 @@ def get_argument(id, argsdict):
     return argument
 
 
-def get_interventionlist(soup):
+def get_setofinterventions(soup):
     """
     Gets the list of interventions.
     TODO: Finora prendi solo la prima frase di ogni intervento!
